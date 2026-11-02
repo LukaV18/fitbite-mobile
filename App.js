@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  Image,
 } from 'react-native';
 import { getRecipes } from './src/services/recipeService';
 import RecipeCard from './src/components/RecipeCard';
@@ -56,18 +57,21 @@ export default function App() {
 
       {/* Header de la App */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🥗 FitBite</Text>
-        <Text style={styles.headerSubtitle}>Recetas saludables y nutrición fit</Text>
+        <View>
+          <Text style={styles.headerTitle}>🥗 FitBite</Text>
+          <Text style={styles.headerSubtitle}>Explorá recetas saludables y nutrición</Text>
+        </View>
       </View>
 
       {/* Buscador de recetas */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar receta (ej. Salad, Chicken)..."
-          placeholderTextColor="#888"
+          placeholder="🔍 Buscar receta (ej. Salad, Chicken)..."
+          placeholderTextColor="#999"
           value={searchText}
           onChangeText={handleSearch}
+          clearButtonMode="while-editing"
         />
       </View>
 
@@ -113,13 +117,14 @@ export default function App() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🍽️</Text>
               <Text style={styles.emptyText}>No se encontraron recetas con ese criterio.</Text>
             </View>
           }
         />
       )}
 
-      {/* Vista de Detalle (Modal) */}
+      {/* Vista de Detalle (Modal con foto e ingredientes) */}
       <Modal visible={!!selectedRecipe} animationType="slide" transparent={false}>
         {selectedRecipe && (
           <SafeAreaView style={styles.modalContainer}>
@@ -131,17 +136,31 @@ export default function App() {
                 <Text style={styles.closeButtonText}>← Volver al catálogo</Text>
               </TouchableOpacity>
 
+              <Image
+                source={{ uri: selectedRecipe.image }}
+                style={styles.modalImage}
+                resizeMode="cover"
+              />
+
+              <View style={styles.modalTagRow}>
+                <View style={styles.modalTag}>
+                  <Text style={styles.modalTagText}>{selectedRecipe.category}</Text>
+                </View>
+                <Text style={styles.modalMeta}>
+                  ⏱️ {selectedRecipe.timeMinutes} min | 🔥 ~{selectedRecipe.calories} kcal
+                </Text>
+              </View>
+
               <Text style={styles.modalTitle}>{selectedRecipe.title}</Text>
-              <Text style={styles.modalMeta}>
-                Categoría: {selectedRecipe.category} | ~{selectedRecipe.calories} kcal | {selectedRecipe.timeMinutes} min
-              </Text>
 
               <Text style={styles.sectionHeader}>Ingredientes:</Text>
-              {selectedRecipe.ingredients.map((ing, idx) => (
-                <Text key={idx} style={styles.bulletItem}>
-                  • {ing}
-                </Text>
-              ))}
+              <View style={styles.ingredientsBox}>
+                {selectedRecipe.ingredients.map((ing, idx) => (
+                  <Text key={idx} style={styles.bulletItem}>
+                    • {ing}
+                  </Text>
+                ))}
+              </View>
 
               <Text style={styles.sectionHeader}>Preparación:</Text>
               <Text style={styles.instructionsText}>
@@ -158,18 +177,22 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f6f8f7',
     paddingTop: StatusBar.currentHeight || 20,
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '800',
     color: '#1b4332',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -178,31 +201,39 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   searchInput: {
     backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: '#e2e8f0',
     fontSize: 14,
-    color: '#333',
+    color: '#1a1a1a',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   categoryChip: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#e9ecef',
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   categoryChipActive: {
     backgroundColor: '#2d6a4f',
+    borderColor: '#2d6a4f',
   },
   categoryText: {
     fontSize: 13,
@@ -214,22 +245,27 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: 30,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 80,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 14,
     fontSize: 14,
     color: '#6c757d',
+    fontWeight: '500',
   },
   emptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: 60,
     alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 10,
   },
   emptyText: {
     color: '#888',
@@ -241,9 +277,10 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     padding: 20,
+    paddingBottom: 40,
   },
   closeButton: {
-    marginBottom: 16,
+    marginBottom: 14,
     paddingVertical: 6,
   },
   closeButtonText: {
@@ -251,23 +288,54 @@ const styles = StyleSheet.create({
     color: '#2d6a4f',
     fontWeight: '700',
   },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1a1a1a',
+  modalImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  modalTagRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  modalTag: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  modalTagText: {
+    color: '#2e7d32',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   modalMeta: {
     fontSize: 13,
     color: '#6c757d',
-    marginBottom: 20,
+    fontWeight: '500',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 16,
+    lineHeight: 30,
   },
   sectionHeader: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2d6a4f',
-    marginTop: 14,
+    color: '#1b4332',
+    marginTop: 16,
     marginBottom: 8,
+  },
+  ingredientsBox: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
   },
   bulletItem: {
     fontSize: 15,
@@ -278,6 +346,6 @@ const styles = StyleSheet.create({
   instructionsText: {
     fontSize: 15,
     color: '#444444',
-    lineHeight: 22,
+    lineHeight: 24,
   },
 });

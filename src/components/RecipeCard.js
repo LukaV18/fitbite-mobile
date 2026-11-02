@@ -3,18 +3,23 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function RecipeCard({ recipe, onPress }) {
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.8} onPress={onPress}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
       <Image source={{ uri: recipe.image }} style={styles.image} resizeMode="cover" />
       <View style={styles.content}>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{recipe.category}</Text>
+        <View style={styles.topRow}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{recipe.category}</Text>
+          </View>
+          <Text style={styles.metaTime}>⏱️ {recipe.timeMinutes} min</Text>
         </View>
+
         <Text style={styles.title} numberOfLines={2}>
           {recipe.title}
         </Text>
+
         <View style={styles.metaRow}>
-          <Text style={styles.metaText}>🔥 {recipe.calories} kcal</Text>
-          <Text style={styles.metaText}>⏱️ {recipe.timeMinutes} min</Text>
+          <Text style={styles.metaCalories}>🔥 ~{recipe.calories} kcal</Text>
+          <Text style={styles.viewMoreText}>Ver receta →</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -24,47 +29,70 @@ export default function RecipeCard({ recipe, onPress }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   image: {
     width: '100%',
-    height: 160,
+    height: 180,
   },
   content: {
     padding: 14,
   },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   tag: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#e6f7ec',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 6,
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   tagText: {
-    color: '#2b9348',
+    color: '#2e7d32',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  metaTime: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 8,
+    lineHeight: 22,
+    marginBottom: 10,
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f5f5f5',
+    paddingTop: 8,
   },
-  metaText: {
+  metaCalories: {
     fontSize: 13,
-    color: '#666666',
+    color: '#e65100',
+    fontWeight: '600',
+  },
+  viewMoreText: {
+    fontSize: 13,
+    color: '#2d6a4f',
+    fontWeight: '700',
   },
 });
