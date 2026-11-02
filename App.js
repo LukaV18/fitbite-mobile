@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -9,21 +9,46 @@ import {
   StatusBar,
   Modal,
   ScrollView,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
-import { MOCK_RECIPES } from './src/data/mockRecipes';
+import { getRecipes } from './src/services/recipeService';
 import RecipeCard from './src/components/RecipeCard';
 
 export default function App() {
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [searchText, setSearchText] = useState('');
 
-  const categories = ['Todos', 'Desayunos', 'Almuerzos', 'Snacks'];
+  // Categorías fijas populares para filtrar
+  const categories = ['Todos', 'Chicken', 'Vegetarian', 'Beef', 'Dessert'];
 
-  // Filtramos la lista según la categoría seleccionada
+  // Carga inicial de datos desde la API
+  useEffect(() => {
+    loadRecipes();
+  }, []);
+
+  const loadRecipes = async (query = '') => {
+    setLoading(true);
+    const data = await getRecipes(query);
+    setRecipes(data);
+    setLoading(false);
+  };
+
+  const handleSearch = (text) => {
+    setSearchText(text);
+    if (text.length > 2 || text.length === 0) {
+      loadRecipes(text);
+    }
+  };
+
+  // Filtrado por categoría en memoria
   const filteredRecipes =
     selectedCategory === 'Todos'
-      ? MOCK_RECIPES
-      : MOCK_RECIPES.filter((r) => r.category === selectedCategory);
+      ? recipes
+      : recipes.filter((r) => r.category.toLowerCase() === selectedCategory.toLowerCase());
 
   return (
     <SafeAreaView style={styles.container}>
@@ -33,6 +58,17 @@ export default function App() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🥗 FitBite</Text>
         <Text style={styles.headerSubtitle}>Recetas saludables y nutrición fit</Text>
+      </View>
+
+      {/* Buscador de recetas */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar receta (ej. Salad, Chicken)..."
+          placeholderTextColor="#888"
+          value={searchText}
+          onChangeText={handleSearch}
+        />
       </View>
 
       {/* Selector horizontal de categorías */}
@@ -60,18 +96,30 @@ export default function App() {
         </ScrollView>
       </View>
 
-      {/* Listado de recetas con FlatList virtualizada */}
-      <FlatList
-        data={filteredRecipes}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RecipeCard recipe={item} onPress={() => setSelectedRecipe(item)} />
-        )}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Spinner de carga o Listado */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2d6a4f" />
+          <Text style={styles.loadingText}>Cargando recetas desde TheMealDB...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredRecipes}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <RecipeCard recipe={item} onPress={() => setSelectedRecipe(item)} />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No se encontraron recetas con ese criterio.</Text>
+            </View>
+          }
+        />
+      )}
 
-      {/* Vista de Detalle (Modal simple sin librerías externas) */}
+      {/* Vista de Detalle (Modal) */}
       <Modal visible={!!selectedRecipe} animationType="slide" transparent={false}>
         {selectedRecipe && (
           <SafeAreaView style={styles.modalContainer}>
@@ -85,7 +133,7 @@ export default function App() {
 
               <Text style={styles.modalTitle}>{selectedRecipe.title}</Text>
               <Text style={styles.modalMeta}>
-                Categoría: {selectedRecipe.category} | {selectedRecipe.calories} kcal | {selectedRecipe.timeMinutes} min
+                Categoría: {selectedRecipe.category} | ~{selectedRecipe.calories} kcal | {selectedRecipe.timeMinutes} min
               </Text>
 
               <Text style={styles.sectionHeader}>Ingredientes:</Text>
@@ -115,7 +163,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   headerTitle: {
     fontSize: 26,
@@ -126,6 +175,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6c757d',
     marginTop: 2,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  searchInput: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    fontSize: 14,
+    color: '#333',
   },
   categoriesContainer: {
     paddingHorizontal: 16,
@@ -152,6 +215,25 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 15,
   },
   modalContainer: {
     flex: 1,
