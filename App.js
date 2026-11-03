@@ -19,6 +19,7 @@ import RecipeCard from './src/components/RecipeCard';
 export default function App() {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [searchText, setSearchText] = useState('');
@@ -36,6 +37,13 @@ export default function App() {
     const data = await getRecipes(query);
     setRecipes(data);
     setLoading(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    const data = await getRecipes(searchText);
+    setRecipes(data);
+    setRefreshing(false);
   };
 
   const handleSearch = (text) => {
@@ -115,6 +123,8 @@ export default function App() {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🍽️</Text>
