@@ -23,9 +23,10 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [favorites, setFavorites] = useState([]);
 
   // Categorías fijas populares para filtrar
-  const categories = ['Todos', 'Chicken', 'Vegetarian', 'Beef', 'Dessert'];
+  const categories = ['Todos', 'Favoritos', 'Chicken', 'Vegetarian', 'Beef', 'Dessert'];
 
   // Carga inicial de datos desde la API
   useEffect(() => {
@@ -53,9 +54,18 @@ export default function App() {
     }
   };
 
-  // Filtrado por categoría en memoria
+  // Alternar favorito por ID
+  const toggleFavorite = (recipeId) => {
+    setFavorites((prev) =>
+      prev.includes(recipeId) ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]
+    );
+  };
+
+  // Filtrado por categoría en memoria (o favoritos)
   const filteredRecipes =
-    selectedCategory === 'Todos'
+    selectedCategory === 'Favoritos'
+      ? recipes.filter((r) => favorites.includes(r.id))
+      : selectedCategory === 'Todos'
       ? recipes
       : recipes.filter((r) => r.category.toLowerCase() === selectedCategory.toLowerCase());
 
@@ -69,6 +79,11 @@ export default function App() {
           <Text style={styles.headerTitle}>🥗 FitBite</Text>
           <Text style={styles.headerSubtitle}>Explorá recetas saludables y nutrición</Text>
         </View>
+        {favorites.length > 0 && (
+          <View style={styles.favBadgeHeader}>
+            <Text style={styles.favBadgeText}>❤️ {favorites.length}</Text>
+          </View>
+        )}
       </View>
 
       {/* Buscador de recetas */}
@@ -101,7 +116,7 @@ export default function App() {
                   selectedCategory === cat && styles.categoryTextActive,
                 ]}
               >
-                {cat}
+                {cat === 'Favoritos' ? `❤️ ${cat} (${favorites.length})` : cat}
               </Text>
             </TouchableOpacity>
           ))}
@@ -119,7 +134,12 @@ export default function App() {
           data={filteredRecipes}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <RecipeCard recipe={item} onPress={() => setSelectedRecipe(item)} />
+            <RecipeCard
+              recipe={item}
+              onPress={() => setSelectedRecipe(item)}
+              isFavorite={favorites.includes(item.id)}
+              onToggleFavorite={toggleFavorite}
+            />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -127,8 +147,17 @@ export default function App() {
           onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🍽️</Text>
-              <Text style={styles.emptyText}>No se encontraron recetas con ese criterio.</Text>
+              <Text style={styles.emptyIcon}>{selectedCategory === 'Favoritos' ? '🤍' : '🍽️'}</Text>
+              <Text style={styles.emptyText}>
+                {selectedCategory === 'Favoritos'
+                  ? 'No tenés recetas guardadas en favoritos todavía.'
+                  : 'No se encontraron recetas con ese criterio.'}
+              </Text>
+              {selectedCategory === 'Favoritos' && (
+                <Text style={styles.emptySubtext}>
+                  Tocá el ícono del corazón en cualquier tarjeta para guardarla acá.
+                </Text>
+              )}
             </View>
           }
         />
@@ -167,6 +196,27 @@ export default function App() {
               </View>
 
               <Text style={styles.modalTitle}>{selectedRecipe.title}</Text>
+
+              {/* Botón de favorito dentro del modal */}
+              <TouchableOpacity
+                style={[
+                  styles.modalFavButton,
+                  favorites.includes(selectedRecipe.id) && styles.modalFavButtonActive,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => toggleFavorite(selectedRecipe.id)}
+              >
+                <Text
+                  style={[
+                    styles.modalFavButtonText,
+                    favorites.includes(selectedRecipe.id) && styles.modalFavButtonTextActive,
+                  ]}
+                >
+                  {favorites.includes(selectedRecipe.id)
+                    ? '❤️ Quitar de mis favoritos'
+                    : '🤍 Guardar en mis favoritos'}
+                </Text>
+              </TouchableOpacity>
 
               <Text style={styles.sectionHeader}>Ingredientes:</Text>
               <View style={styles.ingredientsBox}>
@@ -213,6 +263,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6c757d',
     marginTop: 2,
+  },
+  favBadgeHeader: {
+    backgroundColor: '#ffebee',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
+  },
+  favBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#c62828',
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -275,16 +338,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   emptyContainer: {
-    paddingVertical: 60,
+    paddingVertical: 50,
     alignItems: 'center',
+    paddingHorizontal: 30,
   },
   emptyIcon: {
     fontSize: 40,
     marginBottom: 10,
   },
   emptyText: {
-    color: '#888',
+    color: '#333333',
     fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    color: '#888888',
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -336,14 +408,35 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: '#1a1a1a',
-    marginBottom: 16,
+    marginBottom: 14,
     lineHeight: 30,
+  },
+  modalFavButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalFavButtonActive: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ffcdd2',
+  },
+  modalFavButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#495057',
+  },
+  modalFavButtonTextActive: {
+    color: '#c62828',
   },
   sectionHeader: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1b4332',
-    marginTop: 16,
+    marginTop: 14,
     marginBottom: 8,
   },
   ingredientsBox: {
