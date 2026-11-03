@@ -125,7 +125,12 @@ export default function App() {
       )}
 
       {/* Vista de Detalle (Modal con foto e ingredientes) */}
-      <Modal visible={!!selectedRecipe} animationType="slide" transparent={false}>
+      <Modal
+        visible={!!selectedRecipe}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setSelectedRecipe(null)}
+      >
         {selectedRecipe && (
           <SafeAreaView style={styles.modalContainer}>
             <ScrollView contentContainerStyle={styles.modalScroll}>
