@@ -1,10 +1,20 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function RecipeCard({ recipe, onPress }) {
+export default function RecipeCard({ recipe, onPress, isFavorite, onToggleFavorite }) {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
-      <Image source={{ uri: recipe.image }} style={styles.image} resizeMode="cover" />
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: recipe.image }} style={styles.image} resizeMode="cover" />
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          activeOpacity={0.7}
+          onPress={() => onToggleFavorite && onToggleFavorite(recipe.id)}
+        >
+          <Text style={styles.favoriteIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.content}>
         <View style={styles.topRow}>
           <View style={styles.tag}>
@@ -40,9 +50,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
-  image: {
+  imageContainer: {
+    position: 'relative',
     width: '100%',
     height: 180,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  favoriteIcon: {
+    fontSize: 18,
   },
   content: {
     padding: 14,
