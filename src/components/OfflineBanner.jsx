@@ -1,0 +1,40 @@
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+
+export default function OfflineBanner() {
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const offline = state.isConnected === false || state.isInternetReachable === false;
+      setIsOffline(offline);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (!isOffline) return null;
+
+  return (
+    <View style={styles.banner}>
+      <Text style={styles.text}>Modo sin conexión: mostrando catálogo guardado</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  banner: {
+    backgroundColor: '#FEF3C7',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FDE68A',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  text: {
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
