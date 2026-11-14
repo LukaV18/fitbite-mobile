@@ -2,7 +2,11 @@
   "expo": {
     "name": "FitBite Mobile",
     "slug": "fitbite-mobile",
+    "scheme": "fitbite",
     "version": "1.0.0",
-    "orientation": "portrait"
+    "orientation": "portrait",
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
