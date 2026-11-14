@@ -44,17 +44,20 @@ function formatBackendRecipe(recipe) {
 }
 
 async function fetchFromBackend(searchQuery) {
-  const query = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1800);
 
   try {
-    const res = await fetch(`${API_URL}/api/recipes${query}`, { signal: controller.signal });
+    const res = await fetch(`${API_URL}/api/recipes`, { signal: controller.signal });
     if (!res.ok) return null;
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : data.recipes;
-    if (!Array.isArray(list) || list.length === 0) return null;
-    return list.map(formatBackendRecipe);
+    const json = await res.json();
+    const rawList = Array.isArray(json) ? json : (json.data || json.recipes);
+    if (!Array.isArray(rawList) || rawList.length === 0) return null;
+
+    const formatted = rawList.map(formatBackendRecipe);
+    if (!searchQuery) return formatted;
+    const q = searchQuery.toLowerCase();
+    return formatted.filter((r) => r.title.toLowerCase().includes(q) || r.category.toLowerCase().includes(q));
   } catch {
     return null;
   } finally {
@@ -116,6 +119,19 @@ export const getRecipeById = async (id) => {
   const cached = await getCachedRecipes();
   const localMatch = cached.find((r) => String(r.id) === idStr);
   if (localMatch) return localMatch;
+
+  try {
+    const resBackend = await fetch(`${API_URL}/api/recipes/${encodeURIComponent(idStr)}`);
+    if (resBackend.ok) {
+      const json = await resBackend.json();
+      const item = json.data || json;
+      if (item && (item._id || item.id)) {
+        return formatBackendRecipe(item);
+      }
+    }
+  } catch {
+    // Continuar con fallback a TheMealDB
+  }
 
   try {
     const response = await fetch(`${MEALDB_URL}/lookup.php?i=${encodeURIComponent(idStr)}`);

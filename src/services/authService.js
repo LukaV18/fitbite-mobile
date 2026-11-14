@@ -4,11 +4,21 @@ export const AUTH_DATA_KEY = '@fitbite_auth_data';
 // Cambiar localhost por la IP local de la PC al probar en Expo Go físico
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
+async function fetchWithTimeout(url, options, ms = 2500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export const loginRequest = async (email, password) => {
   const cleanEmail = email.trim().toLowerCase();
 
   try {
-    const response = await fetch(`${API_URL}/api/users/login`, {
+    const response = await fetchWithTimeout(`${API_URL}/api/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, password }),
@@ -25,8 +35,11 @@ export const loginRequest = async (email, password) => {
       source: 'backend',
     };
   } catch (error) {
-    // Si el servidor local no está levantado, permitimos acceso local en modo demo
-    if (error.message && !error.message.toLowerCase().includes('network') && !error.message.toLowerCase().includes('fetch')) {
+    // Si el servidor local no está levantado o expiró el timeout, usamos sesión local
+    const isNetwork =
+      error.name === 'AbortError' ||
+      (error.message && /network|fetch|failed/i.test(error.message));
+    if (!isNetwork) {
       throw error;
     }
     return {
@@ -42,7 +55,7 @@ export const registerRequest = async (name, email, password) => {
   const cleanEmail = email.trim().toLowerCase();
 
   try {
-    const response = await fetch(`${API_URL}/api/users/register`, {
+    const response = await fetchWithTimeout(`${API_URL}/api/users/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: cleanName, email: cleanEmail, password }),
@@ -55,7 +68,10 @@ export const registerRequest = async (name, email, password) => {
 
     return await loginRequest(cleanEmail, password);
   } catch (error) {
-    if (error.message && !error.message.toLowerCase().includes('network') && !error.message.toLowerCase().includes('fetch')) {
+    const isNetwork =
+      error.name === 'AbortError' ||
+      (error.message && /network|fetch|failed/i.test(error.message));
+    if (!isNetwork) {
       throw error;
     }
     return {
