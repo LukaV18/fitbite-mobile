@@ -18,8 +18,6 @@ import { useFavorites } from '../../src/hooks/useFavorites';
 import { getRecipes } from '../../src/services/recipeService';
 import { COLORS } from '../../src/theme/colors';
 
-const CATEGORIES = ['Todos', 'Chicken', 'Vegetarian', 'Beef', 'Seafood', 'Dessert'];
-
 export default function HomeScreen() {
   const router = useRouter();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
@@ -29,6 +27,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchText, setSearchText] = useState('');
+
+  const categories = ['Todos', ...Array.from(new Set(recipes.map((r) => r.category).filter(Boolean)))];
 
   useEffect(() => {
     loadRecipes();
@@ -90,7 +90,7 @@ export default function HomeScreen() {
 
       <View style={styles.categoriesContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <TouchableOpacity
               key={cat}
               style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
