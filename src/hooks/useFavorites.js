@@ -1,44 +1,54 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './useAuth';
 
 const FAVORITES_KEY = '@fitbite_favorites';
 const FavoritesContext = createContext();
 
 export const FavoritesProvider = ({ children }) => {
+  const { auth } = useAuth();
   const [favorites, setFavorites] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
+  const userEmail = auth?.user?.email ? auth.user.email.trim().toLowerCase() : null;
+  const storageKey = userEmail ? `${FAVORITES_KEY}_${userEmail}` : FAVORITES_KEY;
+
   useEffect(() => {
+    setLoaded(false);
     const loadFavorites = async () => {
+      if (!userEmail) {
+        setFavorites([]);
+        setLoaded(true);
+        return;
+      }
       try {
-        const stored = await AsyncStorage.getItem(FAVORITES_KEY);
-        if (stored) {
-          setFavorites(JSON.parse(stored));
-        }
+        const stored = await AsyncStorage.getItem(storageKey);
+        setFavorites(stored ? JSON.parse(stored) : []);
       } catch (error) {
         console.warn('Error cargando favoritos:', error);
+        setFavorites([]);
       } finally {
         setLoaded(true);
       }
     };
 
     loadFavorites();
-  }, []);
+  }, [storageKey, userEmail]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !userEmail) return;
 
     const saveFavorites = async () => {
       try {
-        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(favorites));
       } catch (error) {
         console.warn('Error guardando favoritos:', error);
       }
     };
 
     saveFavorites();
-  }, [favorites, loaded]);
+  }, [favorites, loaded, storageKey, userEmail]);
 
   const toggleFavorite = (recipeId) => {
     const idStr = String(recipeId);
