@@ -26,7 +26,9 @@ export const loginRequest = async (email, password) => {
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || data.message || 'Credenciales inválidas');
+      const authError = new Error(data.error || data.message || 'Credenciales inválidas');
+      authError.isHttpError = true;
+      throw authError;
     }
 
     return {
@@ -35,10 +37,14 @@ export const loginRequest = async (email, password) => {
       source: 'backend',
     };
   } catch (error) {
-    // Si el servidor local no está levantado o expiró el timeout, usamos sesión local
+    // Si el servidor respondió un error HTTP real (ej. 401/400), no hacer fallback local
+    if (error.isHttpError) {
+      throw error;
+    }
     const isNetwork =
       error.name === 'AbortError' ||
-      (error.message && /network|fetch|failed/i.test(error.message));
+      error.name === 'TypeError' ||
+      (error.message && /network request failed|failed to fetch|load failed/i.test(error.message));
     if (!isNetwork) {
       throw error;
     }
@@ -63,14 +69,20 @@ export const registerRequest = async (name, email, password) => {
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || data.message || 'No se pudo completar el registro');
+      const regError = new Error(data.error || data.message || 'No se pudo completar el registro');
+      regError.isHttpError = true;
+      throw regError;
     }
 
     return await loginRequest(cleanEmail, password);
   } catch (error) {
+    if (error.isHttpError) {
+      throw error;
+    }
     const isNetwork =
       error.name === 'AbortError' ||
-      (error.message && /network|fetch|failed/i.test(error.message));
+      error.name === 'TypeError' ||
+      (error.message && /network request failed|failed to fetch|load failed/i.test(error.message));
     if (!isNetwork) {
       throw error;
     }
