@@ -74,13 +74,28 @@ export const getCachedRecipes = async () => {
   }
 };
 
+async function mergeRecipesIntoCache(items) {
+  if (!Array.isArray(items) || items.length === 0) return;
+  try {
+    const existing = await getCachedRecipes();
+    const map = new Map();
+    for (const r of existing) {
+      if (r && r.id != null) map.set(String(r.id), r);
+    }
+    for (const r of items) {
+      if (r && r.id != null) map.set(String(r.id), r);
+    }
+    await AsyncStorage.setItem(RECIPES_CACHE_KEY, JSON.stringify(Array.from(map.values())));
+  } catch {
+    // Ignorar error de escritura en caché
+  }
+}
+
 export const getRecipes = async (searchQuery = '') => {
   // 1. Intentar primero contra el backend propio de TP2
   const fromBackend = await fetchFromBackend(searchQuery);
   if (fromBackend && fromBackend.length > 0) {
-    if (!searchQuery) {
-      AsyncStorage.setItem(RECIPES_CACHE_KEY, JSON.stringify(fromBackend)).catch(() => {});
-    }
+    await mergeRecipesIntoCache(fromBackend);
     return fromBackend;
   }
 
@@ -101,9 +116,7 @@ export const getRecipes = async (searchQuery = '') => {
     }
 
     const formatted = data.meals.map(formatMeal);
-    if (!searchQuery) {
-      AsyncStorage.setItem(RECIPES_CACHE_KEY, JSON.stringify(formatted)).catch(() => {});
-    }
+    await mergeRecipesIntoCache(formatted);
     return formatted;
   } catch (error) {
     console.warn('Sin conexión o error de red, usando caché local:', error);
@@ -126,7 +139,9 @@ export const getRecipeById = async (id) => {
       const json = await resBackend.json();
       const item = json.data || json;
       if (item && (item._id || item.id)) {
-        return formatBackendRecipe(item);
+        const formatted = formatBackendRecipe(item);
+        await mergeRecipesIntoCache([formatted]);
+        return formatted;
       }
     }
   } catch {
@@ -138,7 +153,9 @@ export const getRecipeById = async (id) => {
     if (!response.ok) return null;
     const data = await response.json();
     if (data.meals && data.meals[0]) {
-      return formatMeal(data.meals[0]);
+      const formatted = formatMeal(data.meals[0]);
+      await mergeRecipesIntoCache([formatted]);
+      return formatted;
     }
   } catch {
     // Silencioso si no hay conexión

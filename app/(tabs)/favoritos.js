@@ -10,23 +10,43 @@ import {
 import { useRouter } from 'expo-router';
 import RecipeCard from '../../src/components/RecipeCard';
 import { useFavorites } from '../../src/hooks/useFavorites';
-import { getRecipes } from '../../src/services/recipeService';
+import { getCachedRecipes, getRecipeById } from '../../src/services/recipeService';
 import { COLORS } from '../../src/theme/colors';
 
 export default function FavoritesScreen() {
   const router = useRouter();
   const { favorites, isFavorite, toggleFavorite, clearFavorites } = useFavorites();
-  const [recipes, setRecipes] = useState([]);
+  const [favRecipes, setFavRecipes] = useState([]);
 
   useEffect(() => {
-    const load = async () => {
-      const all = await getRecipes('');
-      setRecipes(all);
-    };
-    load();
-  }, []);
+    let active = true;
+    const loadFavoritesList = async () => {
+      if (favorites.length === 0) {
+        if (active) setFavRecipes([]);
+        return;
+      }
 
-  const favRecipes = recipes.filter((r) => favorites.includes(String(r.id)));
+      const cached = await getCachedRecipes();
+      const byId = new Map(cached.map((r) => [String(r.id), r]));
+
+      const resolved = await Promise.all(
+        favorites.map(async (favId) => {
+          const idStr = String(favId);
+          if (byId.has(idStr)) return byId.get(idStr);
+          return await getRecipeById(idStr);
+        })
+      );
+
+      if (active) {
+        setFavRecipes(resolved.filter(Boolean));
+      }
+    };
+
+    loadFavoritesList();
+    return () => {
+      active = false;
+    };
+  }, [favorites]);
 
   return (
     <SafeAreaView style={styles.container}>
