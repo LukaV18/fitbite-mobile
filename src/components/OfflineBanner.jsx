@@ -3,31 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 
 export default function OfflineBanner() {
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== 'undefined' && navigator.onLine === false
-  );
+  const [isOffline, setIsOffline] = useState(false);
 
+  // Escuchamos cambios de conexion y limpiamos el listener al desmontar
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const offline = state.isConnected === false || state.isInternetReachable === false;
-      setIsOffline(offline);
+      setIsOffline(state.isConnected === false);
     });
-
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-    }
-
-    return () => {
-      unsubscribe();
-      if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      }
-    };
+    return () => unsubscribe();
   }, []);
 
   if (!isOffline) return null;

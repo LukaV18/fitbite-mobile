@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import RecipeCard from '../../src/components/RecipeCard';
 import { useFavorites } from '../../src/hooks/useFavorites';
-import { getCachedRecipes, getRecipeById } from '../../src/services/recipeService';
+import { getCachedRecipes } from '../../src/services/recipeService';
 import { COLORS } from '../../src/theme/colors';
 
 export default function FavoritesScreen() {
@@ -19,33 +19,12 @@ export default function FavoritesScreen() {
   const [favRecipes, setFavRecipes] = useState([]);
 
   useEffect(() => {
-    let active = true;
     const loadFavoritesList = async () => {
-      if (favorites.length === 0) {
-        if (active) setFavRecipes([]);
-        return;
-      }
-
       const cached = await getCachedRecipes();
-      const byId = new Map(cached.map((r) => [String(r.id), r]));
-
-      const resolved = await Promise.all(
-        favorites.map(async (favId) => {
-          const idStr = String(favId);
-          if (byId.has(idStr)) return byId.get(idStr);
-          return await getRecipeById(idStr);
-        })
-      );
-
-      if (active) {
-        setFavRecipes(resolved.filter(Boolean));
-      }
+      setFavRecipes(cached.filter((r) => isFavorite(r.id)));
     };
 
     loadFavoritesList();
-    return () => {
-      active = false;
-    };
   }, [favorites]);
 
   return (

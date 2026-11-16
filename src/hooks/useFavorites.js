@@ -9,62 +9,43 @@ const FavoritesContext = createContext();
 export const FavoritesProvider = ({ children }) => {
   const { auth } = useAuth();
   const [favorites, setFavorites] = useState([]);
-  const [loaded, setLoaded] = useState(false);
 
-  const userEmail = auth?.user?.email ? auth.user.email.trim().toLowerCase() : null;
-  const storageKey = userEmail ? `${FAVORITES_KEY}_${userEmail}` : FAVORITES_KEY;
+  // Clave separada por email para no mezclar favoritos entre usuarios
+  const userEmail = auth?.user?.email?.trim().toLowerCase();
+  const storageKey = userEmail ? `${FAVORITES_KEY}_${userEmail}` : null;
 
+  // Cargamos los favoritos cuando cambia el usuario logueado
   useEffect(() => {
-    setLoaded(false);
     const loadFavorites = async () => {
-      if (!userEmail) {
+      if (!storageKey) {
         setFavorites([]);
-        setLoaded(true);
         return;
       }
-      try {
-        const stored = await AsyncStorage.getItem(storageKey);
-        setFavorites(stored ? JSON.parse(stored) : []);
-      } catch (error) {
-        console.warn('Error cargando favoritos:', error);
-        setFavorites([]);
-      } finally {
-        setLoaded(true);
-      }
+      const stored = await AsyncStorage.getItem(storageKey);
+      setFavorites(stored ? JSON.parse(stored) : []);
     };
-
     loadFavorites();
-  }, [storageKey, userEmail]);
+  }, [storageKey]);
 
-  useEffect(() => {
-    if (!loaded || !userEmail) return;
+  const saveFavorites = async (next) => {
+    setFavorites(next);
+    if (storageKey) {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(next));
+    }
+  };
 
-    const saveFavorites = async () => {
-      try {
-        await AsyncStorage.setItem(storageKey, JSON.stringify(favorites));
-      } catch (error) {
-        console.warn('Error guardando favoritos:', error);
-      }
-    };
-
-    saveFavorites();
-  }, [favorites, loaded, storageKey, userEmail]);
-
+  // Si no estaba en favoritos vibramos y lo agregamos, si estaba lo quitamos
   const toggleFavorite = (recipeId) => {
     const idStr = String(recipeId);
-    setFavorites((prev) => {
-      const exists = prev.includes(idStr);
-      if (!exists) {
-        Vibration.vibrate(50);
-        return [...prev, idStr];
-      }
-      return prev.filter((id) => id !== idStr);
-    });
+    const exists = favorites.includes(idStr);
+    if (!exists) Vibration.vibrate(50);
+
+    const next = exists ? favorites.filter((id) => id !== idStr) : [...favorites, idStr];
+    saveFavorites(next);
   };
 
   const isFavorite = (recipeId) => favorites.includes(String(recipeId));
-
-  const clearFavorites = () => setFavorites([]);
+  const clearFavorites = () => saveFavorites([]);
 
   return (
     <FavoritesContext.Provider value={{ favorites, toggleFavorite, isFavorite, clearFavorites }}>
@@ -75,8 +56,6 @@ export const FavoritesProvider = ({ children }) => {
 
 export const useFavorites = () => {
   const context = useContext(FavoritesContext);
-  if (!context) {
-    throw new Error('useFavorites debe ser usado dentro de un FavoritesProvider');
-  }
+  if (!context) throw new Error('useFavorites debe ser usado dentro de un FavoritesProvider');
   return context;
 };
