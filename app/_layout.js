@@ -8,6 +8,7 @@ function RootNavigator() {
   const { auth, isReady } = useAuth();
   const isAuthenticated = auth !== null;
 
+  // Esperamos a leer AsyncStorage antes de mostrar pantallas
   if (!isReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
@@ -40,10 +41,14 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <FavoritesProvider>
-        <RootNavigator />
-      </FavoritesProvider>
-    </AuthProvider>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' }}>
+        <AuthProvider>
+          <FavoritesProvider>
+            <RootNavigator />
+          </FavoritesProvider>
+        </AuthProvider>
+      </View>
+    </View>
   );
 }

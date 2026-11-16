@@ -24,11 +24,11 @@ export default function HomeScreen() {
 
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchText, setSearchText] = useState('');
 
-  const categories = ['Todos', ...Array.from(new Set(recipes.map((r) => r.category).filter(Boolean)))];
+  // Armamos las categorias sin repetir
+  const categories = ['Todos', ...new Set(recipes.map((r) => r.category))];
 
   useEffect(() => {
     loadRecipes();
@@ -41,13 +41,6 @@ export default function HomeScreen() {
     setLoading(false);
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    const data = await getRecipes(searchText);
-    setRecipes(data);
-    setRefreshing(false);
-  };
-
   const handleSearch = (text) => {
     setSearchText(text);
     if (text.length > 2 || text.length === 0) {
@@ -55,6 +48,7 @@ export default function HomeScreen() {
     }
   };
 
+  // Filtramos por la categoria seleccionada
   const filteredRecipes =
     selectedCategory === 'Todos'
       ? recipes
@@ -123,8 +117,6 @@ export default function HomeScreen() {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyTitle}>No hay recetas para mostrar</Text>
