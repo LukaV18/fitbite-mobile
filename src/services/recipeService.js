@@ -1,18 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MOCK_RECIPES } from '../data/mockRecipes';
 
 const MEALDB_URL = 'https://www.themealdb.com/api/json/v1/1';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const RECIPES_CACHE_KEY = '@fitbite_recipes_cache';
 
-// Formatea el objeto crudo de TheMealDB a la estructura de FitBite
 function formatMeal(meal) {
+  // Armamos la lista de ingredientes del 1 al 20
   const ingredients = [];
   for (let i = 1; i <= 20; i++) {
     const ing = meal[`strIngredient${i}`];
     const measure = meal[`strMeasure${i}`];
     if (ing && ing.trim()) {
-      ingredients.push(measure && measure.trim() ? `${measure.trim()} ${ing.trim()}` : ing.trim());
+      ingredients.push(measure?.trim() ? `${measure.trim()} ${ing.trim()}` : ing.trim());
     }
   }
 
@@ -20,145 +18,57 @@ function formatMeal(meal) {
     id: String(meal.idMeal),
     title: meal.strMeal,
     category: meal.strCategory || 'General',
+    area: meal.strArea || 'Internacional',
     image: meal.strMealThumb,
-    calories: 320 + (Number(String(meal.idMeal).slice(-2)) % 240),
-    timeMinutes: 15 + (Number(String(meal.idMeal).slice(-1)) * 2),
     ingredients: ingredients.length > 0 ? ingredients : ['Ingredientes frescos a gusto'],
     instructions: meal.strInstructions || 'Mezclar y cocinar según indicaciones de la receta.',
   };
 }
 
-function formatBackendRecipe(recipe) {
-  return {
-    id: String(recipe._id || recipe.id),
-    title: recipe.title || recipe.name || 'Receta Fit',
-    category: recipe.category || 'General',
-    image: recipe.image || MOCK_RECIPES[0].image,
-    calories: recipe.calories || 380,
-    timeMinutes: recipe.timeMinutes || 20,
-    ingredients: Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0
-      ? recipe.ingredients
-      : ['Ingredientes naturales'],
-    instructions: recipe.instructions || 'Preparar siguiendo las indicaciones.',
-  };
-}
-
-async function fetchFromBackend(searchQuery) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1800);
-
-  try {
-    const res = await fetch(`${API_URL}/api/recipes`, { signal: controller.signal });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const rawList = Array.isArray(json) ? json : (json.data || json.recipes);
-    if (!Array.isArray(rawList) || rawList.length === 0) return null;
-
-    const formatted = rawList.map(formatBackendRecipe);
-    if (!searchQuery) return formatted;
-    const q = searchQuery.toLowerCase();
-    return formatted.filter((r) => r.title.toLowerCase().includes(q) || r.category.toLowerCase().includes(q));
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 export const getCachedRecipes = async () => {
-  try {
-    const cached = await AsyncStorage.getItem(RECIPES_CACHE_KEY);
-    return cached ? JSON.parse(cached) : MOCK_RECIPES;
-  } catch {
-    return MOCK_RECIPES;
-  }
+  const cached = await AsyncStorage.getItem(RECIPES_CACHE_KEY);
+  return cached ? JSON.parse(cached) : [];
 };
 
-async function mergeRecipesIntoCache(items) {
-  if (!Array.isArray(items) || items.length === 0) return;
-  try {
-    const existing = await getCachedRecipes();
-    const map = new Map();
-    for (const r of existing) {
-      if (r && r.id != null) map.set(String(r.id), r);
-    }
-    for (const r of items) {
-      if (r && r.id != null) map.set(String(r.id), r);
-    }
-    await AsyncStorage.setItem(RECIPES_CACHE_KEY, JSON.stringify(Array.from(map.values())));
-  } catch {
-    // Ignorar error de escritura en caché
-  }
+async function saveToCache(items) {
+  const raw = await AsyncStorage.getItem(RECIPES_CACHE_KEY);
+  const existing = raw ? JSON.parse(raw) : [];
+  const nuevos = items.filter((item) => !existing.some((r) => r.id === item.id));
+  await AsyncStorage.setItem(RECIPES_CACHE_KEY, JSON.stringify([...existing, ...nuevos]));
 }
 
 export const getRecipes = async (searchQuery = '') => {
-  // 1. Intentar primero contra el backend propio de TP2
-  const fromBackend = await fetchFromBackend(searchQuery);
-  if (fromBackend && fromBackend.length > 0) {
-    await mergeRecipesIntoCache(fromBackend);
-    return fromBackend;
-  }
-
-  // 2. Fallback a API pública TheMealDB
   try {
-    const endpoint = searchQuery
-      ? `${MEALDB_URL}/search.php?s=${encodeURIComponent(searchQuery)}`
-      : `${MEALDB_URL}/search.php?s=`;
-
-    const response = await fetch(endpoint);
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
-    }
-
+    const response = await fetch(`${MEALDB_URL}/search.php?s=${encodeURIComponent(searchQuery)}`);
     const data = await response.json();
-    if (!data.meals || data.meals.length === 0) {
-      return [];
-    }
+    if (!data.meals) return [];
 
-    const formatted = data.meals.map(formatMeal);
-    await mergeRecipesIntoCache(formatted);
-    return formatted;
-  } catch (error) {
-    console.warn('Sin conexión o error de red, usando caché local:', error);
+    const recipes = data.meals.map(formatMeal);
+    await saveToCache(recipes);
+    return recipes;
+  } catch {
+    // Si no hay internet usamos el cache local
     const cached = await getCachedRecipes();
     if (!searchQuery) return cached;
-    const q = searchQuery.toLowerCase();
-    return cached.filter((r) => r.title.toLowerCase().includes(q) || r.category.toLowerCase().includes(q));
+    return cached.filter((r) => r.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }
 };
 
 export const getRecipeById = async (id) => {
-  const idStr = String(id);
   const cached = await getCachedRecipes();
-  const localMatch = cached.find((r) => String(r.id) === idStr);
+  const localMatch = cached.find((r) => r.id === String(id));
   if (localMatch) return localMatch;
 
   try {
-    const resBackend = await fetch(`${API_URL}/api/recipes/${encodeURIComponent(idStr)}`);
-    if (resBackend.ok) {
-      const json = await resBackend.json();
-      const item = json.data || json;
-      if (item && (item._id || item.id)) {
-        const formatted = formatBackendRecipe(item);
-        await mergeRecipesIntoCache([formatted]);
-        return formatted;
-      }
-    }
-  } catch {
-    // Continuar con fallback a TheMealDB
-  }
-
-  try {
-    const response = await fetch(`${MEALDB_URL}/lookup.php?i=${encodeURIComponent(idStr)}`);
-    if (!response.ok) return null;
+    const response = await fetch(`${MEALDB_URL}/lookup.php?i=${encodeURIComponent(id)}`);
     const data = await response.json();
-    if (data.meals && data.meals[0]) {
-      const formatted = formatMeal(data.meals[0]);
-      await mergeRecipesIntoCache([formatted]);
-      return formatted;
+    if (data.meals?.[0]) {
+      const recipe = formatMeal(data.meals[0]);
+      await saveToCache([recipe]);
+      return recipe;
     }
   } catch {
-    // Silencioso si no hay conexión
+    // Sin conexión y no estaba en caché
   }
-  return MOCK_RECIPES.find((r) => String(r.id) === idStr) || null;
+  return null;
 };

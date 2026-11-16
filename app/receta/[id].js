@@ -36,7 +36,7 @@ export default function RecipeDetailScreen() {
     if (!recipe) return;
     try {
       await Share.share({
-        message: `🥗 Mirá esta receta en FitBite: ${recipe.title} (${recipe.calories} kcal · ${recipe.timeMinutes} min).`,
+        message: `🥗 Mirá esta receta en FitBite: ${recipe.title} (${recipe.category} · ${recipe.area || 'Internacional'}).`,
       });
     } catch (error) {
       console.warn('Error al compartir receta:', error);
@@ -81,8 +81,8 @@ export default function RecipeDetailScreen() {
         <Text style={styles.title}>{recipe.title}</Text>
 
         <View style={styles.metaRow}>
-          <Text style={styles.metaBadge}>🔥 {recipe.calories} kcal</Text>
-          <Text style={styles.metaBadge}>⏱️ {recipe.timeMinutes} min</Text>
+          <Text style={styles.metaBadge}>🌍 {recipe.area || 'Internacional'}</Text>
+          <Text style={styles.metaBadge}>🥗 {(recipe.ingredients || []).length} ingredientes</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Ingredientes</Text>
