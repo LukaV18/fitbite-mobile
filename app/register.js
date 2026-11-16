@@ -22,18 +22,25 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const showError = (title, message) => {
+    setErrorMsg(message);
+    Alert.alert(title, message);
+  };
 
   const handleRegister = async () => {
+    setErrorMsg('');
     if (name.trim().length < 2) {
-      Alert.alert('Nombre requerido', 'Ingresá tu nombre para crear la cuenta.');
+      showError('Nombre requerido', 'Ingresá tu nombre para crear la cuenta.');
       return;
     }
     if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Email inválido', 'Ingresá un correo electrónico válido.');
+      showError('Email inválido', 'Ingresá un correo electrónico válido.');
       return;
     }
     if (password.length < 4) {
-      Alert.alert('Contraseña corta', 'Usá al menos 4 caracteres.');
+      showError('Contraseña corta', 'Usá al menos 4 caracteres.');
       return;
     }
 
@@ -41,7 +48,7 @@ export default function RegisterScreen() {
     try {
       await register(name, email, password);
     } catch (error) {
-      Alert.alert('Error en el registro', error.message || 'Intentá nuevamente.');
+      showError('Error en el registro', error.message || 'Intentá nuevamente.');
     } finally {
       setSubmitting(false);
     }
@@ -85,6 +92,12 @@ export default function RegisterScreen() {
           value={password}
           onChangeText={setPassword}
         />
+
+        {errorMsg ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.button, submitting && styles.buttonDisabled]}
@@ -162,6 +175,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorBox: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  errorText: {
+    color: '#B91C1C',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   linkBtn: {
     marginTop: 18,
