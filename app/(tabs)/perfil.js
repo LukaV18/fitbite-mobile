@@ -73,7 +73,7 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Favoritos</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{auth?.source === 'backend' ? 'TP2 API' : 'Local'}</Text>
+            <Text style={styles.statNumber}>Activa</Text>
             <Text style={styles.statLabel}>Sesión</Text>
           </View>
         </View>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AUTH_DATA_KEY, loginRequest, registerRequest } from '../services/authService';
+import { AUTH_DATA_KEY, loginRequest, registerRequest, updateUserAvatar } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -62,13 +62,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateAvatar = (avatarUri) => {
-    setAuth((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        user: { ...prev.user, avatarUri },
-      };
-    });
+    if (!auth) return;
+    updateUserAvatar(auth.user.email, avatarUri);
+    setAuth({ ...auth, user: { ...auth.user, avatarUri } });
   };
 
   return (
