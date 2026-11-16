@@ -1,8 +1,21 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 // Clave estándar para persistir la sesión en AsyncStorage
 export const AUTH_DATA_KEY = '@fitbite_auth_data';
+const LOCAL_USERS_KEY = '@fitbite_local_users';
 
 // Cambiar localhost por la IP local de la PC al probar en Expo Go físico
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
+const isNetworkError = (error) =>
+  error.name === 'AbortError' ||
+  error.name === 'TypeError' ||
+  (error.message && /network request failed|failed to fetch|load failed/i.test(error.message));
+
+async function getLocalUsers() {
+  const raw = await AsyncStorage.getItem(LOCAL_USERS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
 
 async function fetchWithTimeout(url, options, ms = 2500) {
   const controller = new AbortController();
@@ -38,19 +51,19 @@ export const loginRequest = async (email, password) => {
     };
   } catch (error) {
     // Si el servidor respondió un error HTTP real (ej. 401/400), no hacer fallback local
-    if (error.isHttpError) {
+    if (error.isHttpError || !isNetworkError(error)) {
       throw error;
     }
-    const isNetwork =
-      error.name === 'AbortError' ||
-      error.name === 'TypeError' ||
-      (error.message && /network request failed|failed to fetch|load failed/i.test(error.message));
-    if (!isNetwork) {
-      throw error;
+
+    const users = await getLocalUsers();
+    const found = users.find((u) => u.email === cleanEmail && u.password === password);
+    if (!found) {
+      throw new Error('Usuario no registrado o contraseña incorrecta');
     }
+
     return {
       accessToken: `local-token-${Date.now()}`,
-      user: { name: cleanEmail.split('@')[0], email: cleanEmail },
+      user: { name: found.name, email: found.email },
       source: 'local',
     };
   }
@@ -76,19 +89,25 @@ export const registerRequest = async (name, email, password) => {
 
     return await loginRequest(cleanEmail, password);
   } catch (error) {
-    if (error.isHttpError) {
+    if (error.isHttpError || !isNetworkError(error)) {
       throw error;
     }
-    const isNetwork =
-      error.name === 'AbortError' ||
-      error.name === 'TypeError' ||
-      (error.message && /network request failed|failed to fetch|load failed/i.test(error.message));
-    if (!isNetwork) {
-      throw error;
+
+    const users = await getLocalUsers();
+    if (users.some((u) => u.email === cleanEmail)) {
+      throw new Error('Ya existe una cuenta registrada con ese email');
     }
+
+    const newUser = {
+      name: cleanName || cleanEmail.split('@')[0],
+      email: cleanEmail,
+      password,
+    };
+    await AsyncStorage.setItem(LOCAL_USERS_KEY, JSON.stringify([...users, newUser]));
+
     return {
       accessToken: `local-token-${Date.now()}`,
-      user: { name: cleanName || cleanEmail.split('@')[0], email: cleanEmail },
+      user: { name: newUser.name, email: newUser.email },
       source: 'local',
     };
   }
